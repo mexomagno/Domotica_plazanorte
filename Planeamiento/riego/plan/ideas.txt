@@ -1,0 +1,13 @@
+Lineales:
+opcion 1: manguera con hoyos
+opción 2: tubo rígido (pvc, metal) con hoyos.
+Dudas: 1) Jardinero lo romperá?
+       2) Presión igual en todos los hoyos?
+
+Cuadrados:
+	A) Aspersor
+	B) Pulverizador
+aspersor de A mojando B también? podría mojar la mesa
+	E) Sistema de B o chorros desde D
+	F) Chorro desde E o manguera (poco elegante)
+	G) Sistema de zonas lineales. La pendiente ayuda a que funcione.
