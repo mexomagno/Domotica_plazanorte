@@ -55,3 +55,6 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# ignorar symlink de parche para include logs
+SOFTWARE/include
