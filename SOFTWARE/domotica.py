@@ -132,7 +132,7 @@ class Device():
     randomize()         : int -> void | añade el factor de aleatoreidad al cambio de estado del dispositivo.
     """
     DEFAULT_VALUE=0
-    valid_gpio=[2,3,4,14,15,17,18] # en orden panel domotica: 2, 3, 4, 17, 18, 15, 14
+    valid_gpio=[2,3,4,17,18,15,14] # en orden panel domotica: 2, 3, 4, 17, 18, 15, 14
     used_gpio=[]
     THRESHOLD_LIMIT = 120 # 2 horas
     init_all = False
@@ -407,7 +407,7 @@ def main():
     # agregar dispositivos
     disps.append(Device("luz entrada",2,"20:20","07:20", r_threshold = 10))    
     disps.append(Device("luz delantera",3,"20:40","07:30", r_threshold = 20))
-    # disps.append(Device("Riego alrededor", 17, "19:00", "19:20", r_threshold = 0))
+    disps.append(Device("Riego alrededor", 17, "22:00", "22:30", r_threshold = 0))
     # Inicializar handler señal SIGINT
     log("Inicializando handler de SIGINT...", True)
     signal.signal(signal.SIGINT, terminate)
