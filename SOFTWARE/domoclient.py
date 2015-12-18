@@ -174,7 +174,7 @@ def parseArguments():
              args.override_status is None and
              args.status is None)):
         argsdict["status"] = "graphic"
-        print argsdict
+        # print argsdict
         return argsdict
     # opciones para dispositivo NO pueden especificarse sin especificar qué dispositivo se quiere configurar
     if args.disp is None:
@@ -214,7 +214,7 @@ def parseArguments():
             else:
                 argsdict[arg] = False
 
-    print argsdict
+    # print argsdict
     return argsdict  
 ##############################################################
 # Conexión y funcionamiento general
@@ -227,7 +227,6 @@ def parseArguments():
         - json con status, si se le pidió el status
 """
 def serve(args, reply):
-    print "Respuesta: "+ reply
     # Si se pidió status, ignorar todo el resto y priorizar esta orden (eso es lo que hará el servidor)
     if args["status"] is not None:
         if args["status"] == "graphic":
@@ -236,26 +235,11 @@ def serve(args, reply):
         else:
             print reply
     else:
+        print "Respuesta del servidor: "+ reply
         # Abortar si el servidor no fue capaz de procesar la petición
         if reply != "OK":
             print ROJO_CLARO + "Error: El servidor encontró errores en la petición" + NO_COLOR
-            return
-        return
-
-
-    # c_a = args.split()
-    # if c_a[0] == "absent_mode":
-    #     if reply == "OK":
-    #         print "Modo Ausente {}".format("Habilitado" if (c_a[1] == "on" or c_a[1] == "enabled" or c_a[1] == "1") else "Deshabilitado")
-    #     else:
-    #         print "Error: '{}'".format(reply)
-    # elif c_a[0] == "status":
-    #     if len(c_a) == 1:
-    #         from yaml import load
-    #         drawPanel(load(reply))
-    #     else:
-    #         print reply
-
+        
 def connect(HOSTS, PORT):
     import socket
     for host in HOSTS:
@@ -290,7 +274,7 @@ def main():
     #import yaml
     from subprocess import call
     s = connect(args["hosts"], args["port"][0])
-    print "Enviando request..."
+    # print "Enviando request..."
     import json
     s.send(json.dumps(args))
     reply = s.recv(2048)
