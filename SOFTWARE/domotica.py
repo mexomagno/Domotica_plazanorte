@@ -247,6 +247,7 @@ class Device():
         lastval = self.value
         # Ver si valor actual concuerda con el estado del pin, en caso contrario, lo corrige
         if OVERRIDE_ALWAYS and self.value != io.input(self.gpio):
+            print "Activando OVERRIDE (otro proceso cambió el estado del pin!)"
             io.output(self.gpio, self.value)
         # ver si se está dentro del intervalo
         if (inInterval(current_time,self.ontime.time(), self.offtime.time())):
@@ -439,7 +440,7 @@ def atender(data):
             disp.setRandomizeThreshold(d["set_randomize"])
         if d["set_value"] is not None:
             print "{} dispositivo {}".format("Encendiendo" if d["set_value"] else "Apagando" ,d["disp"][0])
-            disp.setValue(0 if not d["set_value"][0] else 1)
+            disp.setValue(1 if d["set_value"] else 0)
     # Configuración de absent mode
     if d["absent_mode"] is not None:
         if ABSENT_MODE == d["absent_mode"]:
