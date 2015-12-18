@@ -171,8 +171,9 @@ def parseArguments():
              args.on_time is None and
              args.off_time is None and
              args.absent_mode is None and
-             args.override_status is None)):
-        args.status = "graphic"
+             args.override_status is None and
+             args.status is None)):
+        argsdict["status"] = "graphic"
         print argsdict
         return argsdict
     # opciones para dispositivo NO pueden especificarse sin especificar qué dispositivo se quiere configurar
@@ -258,7 +259,7 @@ def serve(args, reply):
 def connect(HOSTS, PORT):
     import socket
     for host in HOSTS:
-        print "Intentando conectarse con '{}:{}'".format(host, PORT)
+        # print "Intentando conectarse con '{}:{}'".format(host, PORT)
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try: 
             s.settimeout(TIMEOUT)
@@ -270,10 +271,10 @@ def connect(HOSTS, PORT):
                 s.close()
                 print ROJO_CLARO + "Llave del cliente no coincide con la del servidor" + NO_COLOR
                 exit(1)
-            print "Conexión establecida con éxito"
+            # print "Conexión establecida con éxito"
             return s
         except socket.error, msg:
-            print "Except al intentar conectarse: {}".format(msg)
+            # print "Except al intentar conectarse: {}".format(msg)
             s.settimeout(None)
             s.close()
             pass
@@ -301,11 +302,11 @@ main()
 #######################
 """
 PENDIENTE:
-- [DONE] independizarse del archivo en C
 - Posibilidad de mostrar horas de inicio y término, y threshold random seteado
-- [DONE]Mejorar parseo de opciones y usar mejores estándares
-- [NOT]Añadir autocompletado a opciones
-- Posibilidad de especificar host y puerto
+[DONE] - independizarse del archivo en C
+[DONE] - Mejorar parseo de opciones y usar mejores estándares
+[NOT]  - Añadir autocompletado a opciones
+[DONE] - Posibilidad de especificar host y puerto
 
 """
 
