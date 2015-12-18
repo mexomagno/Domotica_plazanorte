@@ -16,3 +16,11 @@ La automatización cubre:
 El hardware adicional documentado acá involucra:
   - Circuito para relés
   - Panel de status y de conexión de dispositivos
+
+TODO:
+    - Capacidad de definir hora de encendido, hora de apagado, factor de aleatorización para dispositivos, con servidor ya inicializado
+    - Capacidad de encender y apagar dispositivos
+    - Integrar como servicio linux en init.d
+    - Interfaz gráfica sencilla
+    - Capacidad de setear característica Override-pin-state (si debiera tener un estado, pero no lo tiene (algo lo cambió por otro lado), forzarlo)
+    - Implementar mayor flexibilidad para fijar horarios, tipo crontab
