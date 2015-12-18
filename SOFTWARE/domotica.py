@@ -41,12 +41,13 @@ logInit()
 # constantes
 SLEEP_TIME =  10 # segundos
 TIME_FORMAT = "%H:%M"
-OVERRIDE_ALWAYS = True
 DEFAULT_PORT = 8004
 PORT = DEFAULT_PORT
 KEY="VVT??/()(/*Q]A]SD[FMAi2!"
+
 # variables globales
-absent_mode = False # Para implementación del modo ausente
+OVERRIDE_ALWAYS = True
+ABSENT_MODE = False # Para implementación del modo ausente
 run = False
 
 ########### MENSAJES CONSOLA ##
@@ -187,6 +188,7 @@ class Device():
     
     def kill(self):
         # Liberar el pin gpio
+        self.setValue(0)
         log("Liberando el pin {}".format(self.gpio))
         Device.used_gpio.remove(self.gpio)
     
@@ -200,7 +202,9 @@ class Device():
         io.output(self.gpio,self.value)
         # Prepararse para el próximo cambio de estado
         self.randomize(self.r_threshold)
-
+    def setName(self, newname):
+        if newname != "":
+            self.name = newname
     def setOnTime(self,ontime):
         """
             Recibe string con horas del tipo "hh:mm"
@@ -218,7 +222,9 @@ class Device():
                         1 en error
         """
         self.offtime = datetime.strptime(offtime,TIME_FORMAT) #.time()
-
+    def setRandomizeThreshold(self, r_threshold):
+        if r_threshold <= Device.THRESHOLD_LIMIT and r_threshold >= 0:
+            self.r_threshold = r_threshold
     ## GETTERS
     def getValue(self):
         return self.value
@@ -226,6 +232,8 @@ class Device():
         return self.gpio
     def getName(self):
         return self.name
+    def getRandomizeThreshold(self):
+        return self.r_threshold
     @classmethod
     def getValidGPIO(cls):
         return cls.valid_gpio
@@ -356,41 +364,7 @@ def serverThread():
         conn.close()
 
 def atender(data):
-    # global absent_mode, disps
-    # valid_args={    'absent_mode'   : ['on','off','enabled','disabled','1','0'],
-    #                 'status'        : ['json']}
-    # if data[0] not in valid_args:
-    #     reply = "Comando inválido."
-    #     print reply
-    #     return reply
-    # if len(data)>1 and data[1] not in valid_args[data[0]]:
-    #     reply = "Comando inválido."
-    #     print reply
-    #     return reply
-    # if data[0]=="absent_mode":
-    #     if data[1]=="on" or data[1]=="enabled" or data[1]=="1":
-    #         if absent_mode:
-    #             reply = "Modo Ausente ya estaba habilitado"
-    #         else:
-    #             print "Habilitando modo Ausente..."
-    #             absent_mode=True
-    #             reply = "OK"
-    #     if data[1]=="off" or data[1]=="disabled" or data[1]=="0":
-    #         if not absent_mode:
-    #             reply = "Modo Ausente ya estaba deshabilitado"
-    #         else:
-    #             print "Deshabilitando modo Ausente..."
-    #             absent_mode=False
-    #             reply = "OK"
-    #     return reply
-    # if data[0]=="status":
-    #     # Enviar json con dispositivos. Cada dispositivo muestra: Su nombre, su estado, su gpio.
-    #     disp_array = []
-    #     valid_gpio=Device.getValidGPIO()
-    #     for gpio in valid_gpio:
-    #         disp_array.append(seekDisp(gpio,"gpio"))
-    #     return json.dumps(disp_array)
-        
+    global ABSENT_MODE, OVERRIDE_ALWAYS
     """
         Toma los datos enviados por el cliente, los analiza y hace operaciones correspondientes.
         Retorna lo que corresponda retornar.
@@ -405,20 +379,88 @@ def atender(data):
     """
     from yaml import load
     d = load(data)
-    # Si status NO es "none", 
+    # Status request
     if d["status"] != None:
+        print "Request de status"
         disp_array = []
         valid_gpio = Device.getValidGPIO()
         for gpio in valid_gpio:
-            disp_array.append(seekDisp(gpio, "gpio"))
+            device = seekDisp(gpio, "gpio")
+            disp_array.append(device if device is not None else {"name": "<no device>", "gpio": "{}".format(gpio), "value": ""})
         return json.dumps(disp_array)
-    
+    # Configuración de un dispositivo
+    if d["disp"] != None:
+        print "Se pide configurar dispositivo en GPIO {}".format(d["disp"][0])
+        # Crear un dispositivo
+        if d["add"]:
+            if d["remove"]:
+                return "No se puede añadir y eliminar al mismo tiempo"
+            # Verificar que no exista ya
+            disp = seekDisp(d["disp"][0], "gpio")
+            if disp is not None:
+                return "GPIO {} ya usado".format(d["disp"][0])
+            # Verificar que se entregaron todos los datos para la creación
+            if (d["set_name"] is None or
+                d["on_time"] is None or
+                d["off_time"] is None):
+                return "Faltan datos para agregar dispositivo"
+            # Crear dispositivo y agregar
+            disps.append(Device(d["set_name"][0], d["disp"][0], "{}:{}".format(d["on_time"][0], d["on_time"][1]), "{}:{}".format(d["off_time"][0], d["off_time"][1]),r_threshold=d["set_randomize"]))
+            print "Agregado dispositivo '{}' en GPIO {}".format(d["set_name"][0], d["disp"][0])
+            return "OK"
+        # Modificar un dispositivo
+        # ver si existe
+        disp = seekDispObject(d["disp"][0], "gpio")
+        if disp is None:
+            return "No existe el dispositivo"
+        if d["remove"]:
+            # Eliminar un dispositivo
+            if d["add"]:
+                return "No se puede añadir y eliminar al mismo tiempo"
+            for device in disps:
+                print "FOR"
+                if device.getGpio() == d["disp"][0]:
+                    print "Eliminado dispositivo '{}' en GPIO {}".format(device.getName(), device.getGpio())
+                    device.setValue(0)
+                    disps.remove(device)
+                    return "OK"
+        # Modificar configuraciones de cada dispositivo
+        if d["set_name"] is not None:
+            print "Cambiando nombre de dispositivo {} a '{}'".format(d["disp"][0], d["set_name"][0])
+            disp.setName(d["set_name"][0])
+        if d["on_time"] is not None:
+            print "Cambiando hora encendido de dispositivo {} a '{}:{}'".format(d["disp"][0], d["on_time"][0], d["on_time"][1])
+            disp.setOnTime( "{}:{}".format(d["on_time"][0], d["on_time"][1]))
+        if d["off_time"] is not None:
+            print "Cambiando hora apagado de dispositivo {} a '{}:{}'".format(d["disp"][0], d["off_time"][0], d["off_time"][1])
+            disp.setOffTime( "{}:{}".format(d["off_time"][0], d["off_time"][1]))
+        if d["set_randomize"] is not None and d["set_randomize"] != disp.getRandomizeThreshold():
+            print "Cambiando random threshold de dispositivo {} a +-{} mins".format(d["disp"][0], d["set_randomize"])
+            disp.setRandomizeThreshold(d["set_randomize"])
+        if d["set_value"] is not None:
+            print "{} dispositivo {}".format("Encendiendo" if d["set_value"] else "Apagando" ,d["disp"][0])
+            disp.setValue(0 if not d["set_value"][0] else 1)
+    # Configuración de absent mode
+    if d["absent_mode"] is not None:
+        if ABSENT_MODE == d["absent_mode"]:
+            print "Modo ausente ya estaba {}".format("activado" if ABSENT_MODE else "desactivado")
+        else:
+            ABSENT_MODE = d["absent_mode"]
+            print "{} modo ausente...".format("Activando" if ABSENT_MODE else "Desactivando")
+    # Configuración de override status
+    if d["override_status"] is not None:
+        if OVERRIDE_ALWAYS == d["override_status"]:
+            print "Modo OVERRIDE ya estaba {}".format("activado" if OVERRIDE_ALWAYS else "desactivado")
+        else:
+            OVERRIDE_ALWAYS = d["override_status"]
+            print "{} modo OVERRIDE...".format("Activando" if OVERRIDE_ALWAYS else "Desactivando")
     return "OK"
 def seekDisp(key, criterion="name"):
     global disps
     """
     Recibe llave de búsqueda, busca según el criterio ("name","gpio") y retorna diccionario con info del dispositivo ([name, gpio, value])
     Diccionario está formado por sólo strings.
+    Si no encuentra nada, retorna 'None'
     """
     for disp in disps:
         if criterion=="name":
@@ -427,8 +469,20 @@ def seekDisp(key, criterion="name"):
         if criterion == "gpio":
             if disp.getGpio() == int(key):
                 return {"name": disp.getName(), "gpio": "{}".format(disp.getGpio()), "value": "{}".format(disp.getValue())}
-    return {"name": "", "gpio": (key if criterion == "gpio" and int(key) in Device.getValidGPIO() else ""), "value": ""}
-
+    return None#{"name": None, "gpio": (key if criterion == "gpio" and int(key) in Device.getValidGPIO() else ""), "value": ""}
+def seekDispObject(key, criterion="name"):
+    global disps
+    """
+    Retorna objeto buscado, no diccionario con info
+    """
+    for disp in disps:
+        if criterion=="name":
+            if disp.getName() == key:
+                return disp
+        if criterion == "gpio":
+            if disp.getGpio() == int(key):
+                return disp
+    return None
 ############ MAIN ##
 def main():
     global run,disps,PORT
