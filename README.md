@@ -20,6 +20,7 @@ El hardware adicional documentado acá involucra:
 TODO:
   * Adaptar domotica.py a upgrades de domoclient.py
   * Capacidad de definir hora de encendido, hora de apagado, factor de aleatorización para dispositivos, con servidor ya inicializado
+  * Soporte para varios horarios en un mismo día (con validaciones correspondientes)
   * Capacidad de encender y apagar dispositivos
   * Integrar como servicio linux en init.d
   * Interfaz gráfica sencilla

@@ -22,8 +22,9 @@ LED_MIDDLE_MARGIN = 3
 LED_WIDTH = 3
 VERSION_TOP_MARGIN = 1
 NAME = "Panel Domótica"
-VERSION = "1.1"
+VERSION = "2.0"
 TIMEOUT = 10
+DEFAULT_PORT = 8004
 
 # Colores:
 NEGRO='\033[0;30m'
@@ -47,6 +48,7 @@ NO_COLOR='\033[0m'
 # Variables para conexión con el servidor
 HOSTS = ["","192.168.0.3","mexomagno.duckdns.org"] # Localhost, raspi local, raspi remota
 PORT = 8004 # Definido por mi
+KEY="VVT??/()(/*Q]A]SD[FMAi2!"
 
 def repeatChar(c,ntimes):
     return c*ntimes
@@ -116,9 +118,9 @@ def showHelp(mensaje):
     print help_msg
     exit()
 # Definición de argumentos válidos
-valid_args={    'absent_mode'   : ['on','off','enabled','disabled','1','0'],
-                'status'        : ["",'json'],
-                'help'          : ["-h", "--help", "-?"]}
+# valid_args={    'absent_mode'   : ['on','off','enabled','disabled','1','0'],
+#                 'status'        : ["",'json'],
+#                 'help'          : ["-h", "--help", "-?"]}
 def panic(mensaje, parser):
     print ROJO_CLARO + mensaje + NO_COLOR
     parser.print_help()
@@ -126,7 +128,8 @@ def panic(mensaje, parser):
 
 def parseArguments():
     import argparse as AP
-    parser = AP.ArgumentParser(description="Comunicación con servidor de domótica", epilog="Versión 1.1")
+    import sys
+    parser = AP.ArgumentParser(description="Comunicación con servidor de domótica", epilog="Versión {}".format(VERSION))
     on_off_choices = ["on", "off", "enabled", "disabled", "1", "0", "true", "false"]
     gpio_choices = [2,3,4,17,18,15,14]
     
@@ -142,47 +145,69 @@ def parseArguments():
     parser.add_argument("-off", "--off-time",   nargs=2, type=int, metavar=("HH", "MM"), help="Setea hora de apagado del dispositivo.")
     # Opciones globales para el servicio
     parser.add_argument("-am", "--absent-mode", nargs=1, choices=on_off_choices, help="Activar|desactivar modo ausente. Utilizado cuando no hay nadie presente en la casa.")
-    parser.add_argument("--override-status",    nargs=1, choices=on_off_choices, help="Setea funcionalidad OVERRIDE. Si está activada, el servidor sobreescribirá output del pin si su estado ha sido cambiado por otro proceso. En caso contrario, se mantiene última modificación al output.")
+    parser.add_argument("-or","--override-status",    nargs=1, choices=on_off_choices, help="Setea funcionalidad OVERRIDE. Si está activada, el servidor sobreescribirá output del pin si su estado ha sido cambiado por otro proceso. En caso contrario, se mantiene última modificación al output.")
     # Opciones de conexión con el servidor
-    parser.add_argument("-H", "--host",         nargs="+", help="Lista de hosts a los que intentar conectarse. Por defecto, se usa '{}'".format(HOSTS))
+    parser.add_argument("-H", "--hosts",         nargs="+", help="Lista de hosts a los que intentar conectarse. Por defecto, se usa '{}'".format(HOSTS))
     parser.add_argument("-P", "--port",         nargs=1, type=int, help="Puerto del host. Por defecto, se usa el '{}'".format(PORT))
     args = parser.parse_args()
 
     # PARSEAR ARGUMENTOS
     argsdict = vars(args)
-    # Si todos son None, se asume status=graphic
-    allnone = True
-    for arg in argsdict:
-        if argsdict[arg] != None:
-            allnone = False
-            break
-    if allnone:
-        argsdict["status"] = "graphic"
+    # Puerto debe ser válido
+    if args.port is None:
+        args.port = [DEFAULT_PORT]
+    if args.port[0] < 1024:
+            panic("Error: El nro de puerto debe ser mayor a 1024", parser)
+    # Si no se ingresan hosts, usar los por defecto
+    if args.hosts is None:
+        args.hosts = HOSTS
+    # Si no se entregó argumentos (o solo puerto y/o hosts), se asume status=graphic
+    if (len(sys.argv) == 1 or
+            (not args.add and
+             not args.remove and
+             args.set_name is None and
+             args.set_value is None and
+             args.set_randomize == 0 and
+             args.on_time is None and
+             args.off_time is None and
+             args.absent_mode is None and
+             args.override_status is None)):
+        args.status = "graphic"
         print argsdict
         return argsdict
     # opciones para dispositivo NO pueden especificarse sin especificar qué dispositivo se quiere configurar
-    if argsdict["disp"] == None:
-        if argsdict["set_value"] != None or argsdict["on_time"] != None or argsdict["off_time"] != None or argsdict["set_name"] != None or argsdict["set_randomize"] != 0 or argsdict["add"] or argsdict["remove"]:
+    if args.disp is None:
+        if (args.set_value is not None or
+            args.on_time is not None or
+            args.off_time is not None or
+            args.set_name is not None or
+            args.set_randomize != 0 or
+            args.add or
+            args.remove):
             panic("Error: Debe especificar un dispositivo al cual asignar esta opción!", parser)
     # Horas ingresadas deben ser válidas
-    if argsdict["on_time"] != None and (argsdict["on_time"][0] not in range(24) or argsdict["on_time"][1] not in range(60)):
-        panic("Error: La hora de encendido '{}:{}' no es válida".format(argsdict["on_time"][0], argsdict["on_time"][1]), parser)
-    if argsdict["off_time"] != None and (argsdict["off_time"][0] not in range(24) or argsdict["off_time"][1] not in range(60)):
-        panic("Error: La hora de apagado '{}:{}' no es válida".format(argsdict["off_time"][0], argsdict["off_time"][1]), parser)
-    # Puerto debe ser válido
-    if argsdict["port"] != None and argsdict["port"][0] < 1024:
-        panic("Error: El nro de puerto debe ser mayor a 1024", parser)
-    
+    if (args.on_time is not None and
+            (args.on_time[0] not in range(24) or
+             args.on_time[1] not in range(60))):
+        panic("Error: La hora de encendido '{}:{}' no es válida".format(args.on_time[0], args.on_time[1]), parser)
+    if (args.off_time is not None and
+            (args.off_time[0] not in range(24) or
+             args.off_time[1] not in range(60))):
+        panic("Error: La hora de apagado '{}:{}' no es válida".format(args.off_time[0], args.off_time[1]), parser)
     # Si quiere agregar dispositivo, debe tener Nombre, gpio, hora inicio y hora término
-    if argsdict["add"] and (argsdict["set_name"] == None or argsdict["disp"] == None or argsdict["on_time"] == None or argsdict["off_time"] == None):
+    if (args.add and
+            (args.set_name is None or
+             args.disp is None or
+             args.on_time is None or
+             args.off_time is None)):
         panic("Error: Faltan parámetros para agregar dispositivo. Debe especificar --disp --set-name --on-time --off-time", parser)
     # No se puede agregar y eliminar al mismo tiempo un dispositivo
-    if argsdict["add"] and argsdict["remove"]:
+    if args.add and args.remove:
         panic("Error: No se puede simultáneamente agregar y eliminar un dispositivo", parser)
     # Reemplazar on-1-enabled-true por True
     # Reemplazar off-0-disabled-false por False
     for arg in argsdict:
-        if argsdict[arg] != None and type(argsdict[arg]) is list and argsdict[arg][0] in on_off_choices:
+        if argsdict[arg] is not None and type(argsdict[arg]) is list and argsdict[arg][0] in on_off_choices:
             if argsdict[arg][0] in ["on", "1", "enable", "true"]:
                 argsdict[arg] = True
             else:
@@ -201,8 +226,9 @@ def parseArguments():
         - json con status, si se le pidió el status
 """
 def serve(args, reply):
+    print "Respuesta: "+ reply
     # Si se pidió status, ignorar todo el resto y priorizar esta orden (eso es lo que hará el servidor)
-    if args["status"] != None:
+    if args["status"] is not None:
         if args["status"] == "graphic":
             from yaml import load
             drawPanel(load(reply))
@@ -213,7 +239,6 @@ def serve(args, reply):
         if reply != "OK":
             print ROJO_CLARO + "Error: El servidor encontró errores en la petición" + NO_COLOR
             return
-        print reply
         return
 
 
@@ -230,16 +255,25 @@ def serve(args, reply):
     #     else:
     #         print reply
 
-def connect():
+def connect(HOSTS, PORT):
     import socket
     for host in HOSTS:
+        print "Intentando conectarse con '{}:{}'".format(host, PORT)
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try: 
             s.settimeout(TIMEOUT)
             s.connect((host,PORT))
             s.settimeout(None)
+            s.send(KEY)
+            reply = s.recv(1024)
+            if reply != "OK":
+                s.close()
+                print ROJO_CLARO + "Llave del cliente no coincide con la del servidor" + NO_COLOR
+                exit(1)
+            print "Conexión establecida con éxito"
             return s
         except socket.error, msg:
+            print "Except al intentar conectarse: {}".format(msg)
             s.settimeout(None)
             s.close()
             pass
@@ -251,15 +285,16 @@ def connect():
 ###########################################################################
 def main():
     args = parseArguments()
-    exit(0)
     #import socket
     #import yaml
     from subprocess import call
-    s = connect()
-    s.send(args)
-    reply = s.recv(1024)
-    serve(args, reply)
+    s = connect(args["hosts"], args["port"][0])
+    print "Enviando request..."
+    import json
+    s.send(json.dumps(args))
+    reply = s.recv(2048)
     s.close()
+    serve(args, reply)
 
 main()
 
