@@ -42,6 +42,9 @@ logInit()
 SLEEP_TIME =  10 # segundos
 TIME_FORMAT = "%H:%M"
 OVERRIDE_ALWAYS = True
+DEFAULT_PORT = 8004
+PORT = DEFAULT_PORT
+KEY="VVT??/()(/*Q]A]SD[FMAi2!"
 # variables globales
 absent_mode = False # Para implementación del modo ausente
 run = False
@@ -49,7 +52,6 @@ run = False
 ########### MENSAJES CONSOLA ##
 VERBOSE = True # Mensajes de error
 DEBUG = False # Mensajes de debug
-
 def log (mensaje, debug = False, file = False):
     """
         Si file = True, escribe el log en el archivo de logs de este programa
@@ -315,10 +317,10 @@ def endProgram(rc):
     exit(rc)
 
 def serverThread():
-    global run
+    global run, PORT
     HOST = ''
-    PORT = 8004
     print "Comienza el servidor"
+    print "Usando puerto {}".format(PORT)
     # Creación de socket
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
@@ -335,51 +337,83 @@ def serverThread():
         # Esperar conexión
         (conn, addr) = s.accept()
         print 'Conectado con ' + addr[0] + ':' + str(addr[1])
-        # Recibir datos
-        data = conn.recv(1024).split()
+        # Recibir llave autenticación
+        data = conn.recv(1024)
+        if data != KEY:
+            print "WARNING: Se recibió llave inválida"
+            conn.send("KO")
+            conn.close()
+            continue
+        else:
+            conn.send("OK")
         # Procesar datos
+        data = conn.recv(2048)
         reply = atender(data)
         # Responder
         conn.send(reply)
+        print "Cliente atendido. Respuesta: {}".format(reply)
         logWrite("Cliente atendido.\n Request: '{}'\n Response: '{}'".format(data,reply))
         conn.close()
 
 def atender(data):
-    global absent_mode, disps
-    valid_args={    'absent_mode'   : ['on','off','enabled','disabled','1','0'],
-                    'status'        : ['json']}
-    if data[0] not in valid_args:
-        reply = "Comando inválido."
-        print reply
-        return reply
-    if len(data)>1 and data[1] not in valid_args[data[0]]:
-        reply = "Comando inválido."
-        print reply
-        return reply
-    if data[0]=="absent_mode":
-        if data[1]=="on" or data[1]=="enabled" or data[1]=="1":
-            if absent_mode:
-                reply = "Modo Ausente ya estaba habilitado"
-            else:
-                print "Habilitando modo Ausente..."
-                absent_mode=True
-                reply = "OK"
-        if data[1]=="off" or data[1]=="disabled" or data[1]=="0":
-            if not absent_mode:
-                reply = "Modo Ausente ya estaba deshabilitado"
-            else:
-                print "Deshabilitando modo Ausente..."
-                absent_mode=False
-                reply = "OK"
-        return reply
-    if data[0]=="status":
-        # Enviar json con dispositivos. Cada dispositivo muestra: Su nombre, su estado, su gpio.
-        disp_array = []
-        valid_gpio=Device.getValidGPIO()
-        for gpio in valid_gpio:
-            disp_array.append(seekDisp(gpio,"gpio"))
-        return json.dumps(disp_array)
+    # global absent_mode, disps
+    # valid_args={    'absent_mode'   : ['on','off','enabled','disabled','1','0'],
+    #                 'status'        : ['json']}
+    # if data[0] not in valid_args:
+    #     reply = "Comando inválido."
+    #     print reply
+    #     return reply
+    # if len(data)>1 and data[1] not in valid_args[data[0]]:
+    #     reply = "Comando inválido."
+    #     print reply
+    #     return reply
+    # if data[0]=="absent_mode":
+    #     if data[1]=="on" or data[1]=="enabled" or data[1]=="1":
+    #         if absent_mode:
+    #             reply = "Modo Ausente ya estaba habilitado"
+    #         else:
+    #             print "Habilitando modo Ausente..."
+    #             absent_mode=True
+    #             reply = "OK"
+    #     if data[1]=="off" or data[1]=="disabled" or data[1]=="0":
+    #         if not absent_mode:
+    #             reply = "Modo Ausente ya estaba deshabilitado"
+    #         else:
+    #             print "Deshabilitando modo Ausente..."
+    #             absent_mode=False
+    #             reply = "OK"
+    #     return reply
+    # if data[0]=="status":
+    #     # Enviar json con dispositivos. Cada dispositivo muestra: Su nombre, su estado, su gpio.
+    #     disp_array = []
+    #     valid_gpio=Device.getValidGPIO()
+    #     for gpio in valid_gpio:
+    #         disp_array.append(seekDisp(gpio,"gpio"))
+    #     return json.dumps(disp_array)
+        
+    """
+        Toma los datos enviados por el cliente, los analiza y hace operaciones correspondientes.
+        Retorna lo que corresponda retornar.
+        "data" es directamente lo recibido desde el cliente. Es un diccionario conteniendo los valores 
+        (previamente validados por el cliente) de los argumentos ingresados.
 
+        Puede recibir dos tipos de requests:
+        - configuración y seteo de valores
+            - respuesta posible OK o ERROR
+        - Petición de status e información
+            - Respuesta es la información pedida
+    """
+    from yaml import load
+    d = load(data)
+    # Si status NO es "none", 
+    if d["status"] != None:
+        disp_array = []
+        valid_gpio = Device.getValidGPIO()
+        for gpio in valid_gpio:
+            disp_array.append(seekDisp(gpio, "gpio"))
+        return json.dumps(disp_array)
+    
+    return "OK"
 def seekDisp(key, criterion="name"):
     global disps
     """
@@ -397,7 +431,16 @@ def seekDisp(key, criterion="name"):
 
 ############ MAIN ##
 def main():
-    global run,disps
+    global run,disps,PORT
+    # Parsear argumentos
+    import argparse
+    parser = argparse.ArgumentParser(description="Servidor de domótica", epilog = "Versión 1.1")
+    parser.add_argument("-p", "--port", nargs=1, type=int, help="Puerto por el cual escuchar peticiones de clientes. Por defecto: {}".format(DEFAULT_PORT))
+    args = parser.parse_args()
+    if vars(args)["port"] != None:
+        if vars(args)["port"][0] < 1024:
+            panic("El puerto debe ser mayor o igual a 1024")
+        PORT = vars(args)["port"][0]
     # Activar/Desactivar warnings de Rpi.GPIO
     io.setwarnings(DEBUG)
     # Inicializar dispositivos
@@ -405,9 +448,9 @@ def main():
     log("Inicializando dispositivos...")
     disps = []
     # agregar dispositivos
-    disps.append(Device("luz entrada",2,"20:20","07:20", r_threshold = 10))    
-    disps.append(Device("luz delantera",3,"20:40","07:30", r_threshold = 20))
-    disps.append(Device("Riego alrededor", 17, "22:00", "22:30", r_threshold = 0))
+    # disps.append(Device("luz entrada",2,"20:20","07:20", r_threshold = 10))    
+    # disps.append(Device("luz delantera",3,"20:40","07:30", r_threshold = 20))
+    # disps.append(Device("Riego alrededor", 17, "22:00", "22:30", r_threshold = 0))
     # Inicializar handler señal SIGINT
     log("Inicializando handler de SIGINT...", True)
     signal.signal(signal.SIGINT, terminate)
