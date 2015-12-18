@@ -137,6 +137,7 @@ def parseArguments():
     parser.add_argument("-r","--remove",        action="store_true",           help="Elimina (o lo intenta) dispositivo existente")
     parser.add_argument("-sn", "--set-name",    nargs=1, metavar="NAME", help="Setea un nuevo nombre para el dispositivo")
     parser.add_argument("-sv", "--set-value",   nargs=1, choices=on_off_choices, help="Setea inmediatamente un estado para el dispositivo en cierto GPIO. Valor NO afectado por OVERRIDE.")
+    parser.add_argument("-sr", "--set-randomize", nargs=1, metavar="THRES", default=0, type=int, help="Define rango en minutos de aleatorización de hora de inicio y término.")
     parser.add_argument("-on", "--on-time",     nargs=2, type=int, metavar=("HH", "MM"), help="Setea hora de encendido del dispositivo.")
     parser.add_argument("-off", "--off-time",   nargs=2, type=int, metavar=("HH", "MM"), help="Setea hora de apagado del dispositivo.")
     # Opciones globales para el servicio
@@ -161,7 +162,7 @@ def parseArguments():
         return argsdict
     # opciones para dispositivo NO pueden especificarse sin especificar qué dispositivo se quiere configurar
     if argsdict["disp"] == None:
-        if argsdict["set_value"] != None or argsdict["on_time"] != None or argsdict["off_time"] != None or argsdict["set_name"] != None or argsdict["add"] != None or argsdict["remove"] != None:
+        if argsdict["set_value"] != None or argsdict["on_time"] != None or argsdict["off_time"] != None or argsdict["set_name"] != None or argsdict["set_randomize"] != 0 or argsdict["add"] or argsdict["remove"]:
             panic("Error: Debe especificar un dispositivo al cual asignar esta opción!", parser)
     # Horas ingresadas deben ser válidas
     if argsdict["on_time"] != None and (argsdict["on_time"][0] not in range(24) or argsdict["on_time"][1] not in range(60)):
@@ -186,6 +187,7 @@ def parseArguments():
                 argsdict[arg] = True
             else:
                 argsdict[arg] = False
+
     print argsdict
     return argsdict  
 ##############################################################
