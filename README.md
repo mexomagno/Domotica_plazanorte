@@ -22,8 +22,9 @@ TODO:
   * ~~Adaptar domotica.py a upgrades de domoclient.py~~
   * ~~Capacidad de definir hora de encendido, hora de apagado, factor de aleatorización para dispositivos, con servidor ya inicializado~~
   * ~~Capacidad de setear característica Override-pin-state (si debiera tener cierto estado, pero no lo tiene (algo lo cambió por otro lado), forzarlo)~~
-  * Soporte para varios horarios en un mismo día (con validaciones correspondientes)
   * ~~Capacidad de encender y apagar dispositivos~~
+  * Soporte para varios horarios en un mismo día (con validaciones correspondientes)
   * Integrar como servicio linux en init.d
-  * Interfaz gráfica sencilla
+  * Cliente GUI
   * Implementar mayor flexibilidad para fijar horarios, tipo crontab
+  * Implementar configuraciones persistentes
