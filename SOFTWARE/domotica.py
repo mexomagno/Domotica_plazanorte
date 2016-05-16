@@ -540,7 +540,7 @@ def main():
     # Cargar dispositivos
     # Se leerá archivo de dispositivos previamente guardado
     disps = []
-    updatePicklefile()
+    updatePickleFile()
     # Inicializar dispositivos
     logWrite("Inicializando dispositivos...")
     log("Inicializando dispositivos...")
