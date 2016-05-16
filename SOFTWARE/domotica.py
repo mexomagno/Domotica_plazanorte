@@ -512,7 +512,7 @@ def updatePickleFile():
     # guardar archivo actual
     log("Intentando guardar nuevo archivo pickle")
     logWrite("Intentando guardar nuevo archivo pickle")
-    pickle.dump(disps, open(PICKLE_ABS_PATH, 'wb', pickle.HIGHEST_PROTOCOL))
+    pickle.dump(disps, open(PICKLE_ABS_PATH, "wb", pickle.HIGHEST_PROTOCOL))
     # comprobar que archivo fue creado
     if not os.path.isfile(PICKLE_ABS_PATH):
         log("ERROR: No se pudo crear archivo pickle en '{}'".format(PICKLE_ABS_PATH))
@@ -529,7 +529,7 @@ def loadPickleFile():
         logWrite("Archivo pickle no existe. No se carga nada")
         return []
     # intentar cargar archivo
-    disps = pickle.load(open(PICKLE_ABS_PATH, 'rb'))
+    disps = pickle.load(open(PICKLE_ABS_PATH, "rb"))
     log("Archivo pickle cargado")
     logWrite("Archivo pickle cargado")
     return disps
@@ -548,12 +548,12 @@ def main():
         PORT = vars(args)["port"][0]
     # Activar/Desactivar warnings de Rpi.GPIO
     io.setwarnings(DEBUG)
+    logWrite("Inicializando dispositivos...")
+    log("Inicializando dispositivos...")
     # Cargar dispositivos
     # Se leerá archivo de dispositivos previamente guardado
     disps = loadPickleFile()
     # Inicializar dispositivos
-    logWrite("Inicializando dispositivos...")
-    log("Inicializando dispositivos...")
     # disps.append(Device("luz entrada",2,"20:20","07:20", r_threshold = 10))    
     # disps.append(Device("luz delantera",3,"20:40","07:30", r_threshold = 20))
     # disps.append(Device("Riego alrededor", 17, "22:00", "22:30", r_threshold = 0))
