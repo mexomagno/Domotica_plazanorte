@@ -47,7 +47,7 @@ DEFAULT_PORT = 8004
 PORT = DEFAULT_PORT
 KEY="VVT??/()(/*Q]A]SD[FMAi2!"
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
-PICKLE_FILENAME = "saved_confs.pkl"
+PICKLE_FILENAME = "saved_disps.pkl"
 PICKLE_ABS_PATH = "{}/{}".format(SCRIPT_DIR, PICKLE_FILENAME)
 
 # variables globales
@@ -512,7 +512,8 @@ def updatePickleFile():
     # guardar archivo actual
     log("Intentando guardar nuevo archivo pickle")
     logWrite("Intentando guardar nuevo archivo pickle")
-    pickle.dump(disps, open(PICKLE_ABS_PATH, "wb", pickle.HIGHEST_PROTOCOL))
+    with open(PICKLE_ABS_PATH, 'wb') as file:
+        pickle.dump(disps, file, pickle.HIGHEST_PROTOCOL)
     # comprobar que archivo fue creado
     if not os.path.isfile(PICKLE_ABS_PATH):
         log("ERROR: No se pudo crear archivo pickle en '{}'".format(PICKLE_ABS_PATH))
@@ -529,7 +530,8 @@ def loadPickleFile():
         logWrite("Archivo pickle no existe. No se carga nada")
         return []
     # intentar cargar archivo
-    disps = pickle.load(open(PICKLE_ABS_PATH, "rb"))
+    with open(PICKLE_ABS_PATH, 'rb') as file:
+        disps = pickle.load(file)
     log("Archivo pickle cargado")
     logWrite("Archivo pickle cargado")
     return disps
