@@ -523,16 +523,16 @@ def updatePickleFile():
     return 0
 
 def loadPickleFile():
-    global disps
     # ver si archivo existe
     if not os.path.isfile(PICKLE_ABS_PATH):
         log("Archivo pickle no existe. No se carga nada")
         logWrite("Archivo pickle no existe. No se carga nada")
-        return
+        return []
     # intentar cargar archivo
     disps = pickle.load(open(PICKLE_ABS_PATH, 'rb'))
     log("Archivo pickle cargado")
     logWrite("Archivo pickle cargado")
+    return disps
 
 ############ MAIN ##
 def main():
@@ -550,8 +550,7 @@ def main():
     io.setwarnings(DEBUG)
     # Cargar dispositivos
     # Se leerá archivo de dispositivos previamente guardado
-    disps = []
-    loadPickleFile()
+    disps = loadPickleFile()
     # Inicializar dispositivos
     logWrite("Inicializando dispositivos...")
     log("Inicializando dispositivos...")
