@@ -58,3 +58,6 @@ target/
 
 # ignorar symlink de parche para include logs
 SOFTWARE/include
+
+# ignorar archivo pickle
+SOFTWARE/saved_confs.pkl

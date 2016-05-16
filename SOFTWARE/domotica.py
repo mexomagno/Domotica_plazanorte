@@ -34,6 +34,8 @@ from datetime import datetime, timedelta
 import time # para control de tiempos
 from random import randint
 import threading,json,socket
+import os
+import pickle
 # Para guardar logs
 from include.python.logs import *
 # Iniciar archivo de logs
@@ -44,6 +46,9 @@ TIME_FORMAT = "%H:%M"
 DEFAULT_PORT = 8004
 PORT = DEFAULT_PORT
 KEY="VVT??/()(/*Q]A]SD[FMAi2!"
+SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
+PICKLE_FILENAME = "saved_confs.pkl"
+PICKLE_ABS_PATH = "{}/{}".format(SCRIPT_DIR, PICKLE_FILENAME)
 
 # variables globales
 OVERRIDE_ALWAYS = True
@@ -408,6 +413,7 @@ def atender(data):
             # Crear dispositivo y agregar
             disps.append(Device(d["set_name"][0], d["disp"][0], "{}:{}".format(d["on_time"][0], d["on_time"][1]), "{}:{}".format(d["off_time"][0], d["off_time"][1]),r_threshold=d["set_randomize"]))
             print "Agregado dispositivo '{}' en GPIO {}".format(d["set_name"][0], d["disp"][0])
+            updatePickeFile()
             return "OK"
         # Modificar un dispositivo
         # ver si existe
@@ -424,6 +430,7 @@ def atender(data):
                     print "Eliminado dispositivo '{}' en GPIO {}".format(device.getName(), device.getGpio())
                     device.setValue(0)
                     disps.remove(device)
+                    updatePickeFile()
                     return "OK"
         # Modificar configuraciones de cada dispositivo
         if d["set_name"] is not None:
@@ -455,6 +462,7 @@ def atender(data):
         else:
             OVERRIDE_ALWAYS = d["override_status"]
             print "{} modo OVERRIDE...".format("Activando" if OVERRIDE_ALWAYS else "Desactivando")
+    updatePickeFile()
     return "OK"
 def seekDisp(key, criterion="name"):
     global disps
@@ -484,6 +492,37 @@ def seekDispObject(key, criterion="name"):
             if disp.getGpio() == int(key):
                 return disp
     return None
+
+
+def updatePickleFile():
+    global disps
+    # borrar pickle file actual (si existe)
+    if os.path.isfile(PICKLE_ABS_PATH):
+        log("Borrando archivo pickle anterior")
+        logWrite("Borrando archivo pickle anterior")
+        os.remove(PICKLE_ABS_PATH)
+        # comprobar que pude borrarlo
+        if os.path.isfile(PICKLE_ABS_PATH):
+            log("ERROR: No se pudo borrar antiguo archivo pickle")
+            logWrite("ERROR: No se pudo borrar antiguo archivo pickle")
+            return 1
+    else:
+        log("Creando nuevo archivo pickle")
+        logWrite("Creando nuevo archivo pickle")
+    # guardar archivo actual
+    log("Intentando guardar nuevo archivo pickle")
+    logWrite("Intentando guardar nuevo archivo pickle")
+    pickle.dump(disps, open(PICKLE_ABS_PATH, 'wb', pickle.HIGHEST_PROTOCOL))
+    # comprobar que archivo fue creado
+    if not os.path.isfile(PICKLE_ABS_PATH):
+        log("ERROR: No se pudo crear archivo pickle en '{}'".format(PICKLE_ABS_PATH))
+        logWrite("ERROR: No se pudo crear archivo pickle en '{}'".format(PICKLE_ABS_PATH))
+        return 1
+    log("Archivo pickle actualizado con éxito")
+    logWrite("Archivo pickle actualizado con éxito")
+    return 0
+
+
 ############ MAIN ##
 def main():
     global run,disps,PORT
@@ -498,11 +537,13 @@ def main():
         PORT = vars(args)["port"][0]
     # Activar/Desactivar warnings de Rpi.GPIO
     io.setwarnings(DEBUG)
+    # Cargar dispositivos
+    # Se leerá archivo de dispositivos previamente guardado
+    disps = []
+    updatePicklefile()
     # Inicializar dispositivos
     logWrite("Inicializando dispositivos...")
     log("Inicializando dispositivos...")
-    disps = []
-    # agregar dispositivos
     # disps.append(Device("luz entrada",2,"20:20","07:20", r_threshold = 10))    
     # disps.append(Device("luz delantera",3,"20:40","07:30", r_threshold = 20))
     # disps.append(Device("Riego alrededor", 17, "22:00", "22:30", r_threshold = 0))
