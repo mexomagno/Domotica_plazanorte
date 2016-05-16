@@ -35,7 +35,6 @@ import time # para control de tiempos
 from random import randint
 import threading,json,socket
 import os
-import pickle
 # Para guardar logs
 from include.python.logs import *
 # Iniciar archivo de logs
@@ -47,8 +46,8 @@ DEFAULT_PORT = 8004
 PORT = DEFAULT_PORT
 KEY="VVT??/()(/*Q]A]SD[FMAi2!"
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
-PICKLE_FILENAME = "saved_disps.pkl"
-PICKLE_ABS_PATH = "{}/{}".format(SCRIPT_DIR, PICKLE_FILENAME)
+JSON_FILENAME = "saved_disps.json"
+JSON_ABS_PATH = "{}/{}".format(SCRIPT_DIR, JSON_FILENAME)
 
 # variables globales
 OVERRIDE_ALWAYS = True
@@ -413,7 +412,7 @@ def atender(data):
             # Crear dispositivo y agregar
             disps.append(Device(d["set_name"][0], d["disp"][0], "{}:{}".format(d["on_time"][0], d["on_time"][1]), "{}:{}".format(d["off_time"][0], d["off_time"][1]),r_threshold=d["set_randomize"]))
             print "Agregado dispositivo '{}' en GPIO {}".format(d["set_name"][0], d["disp"][0])
-            updatePickleFile()
+            updateDispsFile()
             return "OK"
         # Modificar un dispositivo
         # ver si existe
@@ -430,7 +429,7 @@ def atender(data):
                     print "Eliminado dispositivo '{}' en GPIO {}".format(device.getName(), device.getGpio())
                     device.setValue(0)
                     disps.remove(device)
-                    updatePickleFile()
+                    updateDispsFile()
                     return "OK"
         # Modificar configuraciones de cada dispositivo
         if d["set_name"] is not None:
@@ -462,7 +461,7 @@ def atender(data):
         else:
             OVERRIDE_ALWAYS = d["override_status"]
             print "{} modo OVERRIDE...".format("Activando" if OVERRIDE_ALWAYS else "Desactivando")
-    updatePickleFile()
+    updateDispsFile()
     return "OK"
 def seekDisp(key, criterion="name"):
     global disps
@@ -494,15 +493,15 @@ def seekDispObject(key, criterion="name"):
     return None
 
 
-def updatePickleFile():
+def updateDispsFile():
     global disps
     # borrar pickle file actual (si existe)
-    if os.path.isfile(PICKLE_ABS_PATH):
+    if os.path.isfile(JSON_ABS_PATH):
         log("Borrando archivo pickle anterior")
         logWrite("Borrando archivo pickle anterior")
-        os.remove(PICKLE_ABS_PATH)
+        os.remove(JSON_ABS_PATH)
         # comprobar que pude borrarlo
-        if os.path.isfile(PICKLE_ABS_PATH):
+        if os.path.isfile(JSON_ABS_PATH):
             log("ERROR: No se pudo borrar antiguo archivo pickle")
             logWrite("ERROR: No se pudo borrar antiguo archivo pickle")
             return 1
@@ -512,29 +511,32 @@ def updatePickleFile():
     # guardar archivo actual
     log("Intentando guardar nuevo archivo pickle")
     logWrite("Intentando guardar nuevo archivo pickle")
-    with open(PICKLE_ABS_PATH, 'wb') as file:
-        pickle.dump(disps, file, pickle.HIGHEST_PROTOCOL)
+    with open(JSON_ABS_PATH, 'wb') as file:
+        json.dump(disps, file, default=jdefault)
     # comprobar que archivo fue creado
-    if not os.path.isfile(PICKLE_ABS_PATH):
-        log("ERROR: No se pudo crear archivo pickle en '{}'".format(PICKLE_ABS_PATH))
-        logWrite("ERROR: No se pudo crear archivo pickle en '{}'".format(PICKLE_ABS_PATH))
+    if not os.path.isfile(JSON_ABS_PATH):
+        log("ERROR: No se pudo crear archivo pickle en '{}'".format(JSON_ABS_PATH))
+        logWrite("ERROR: No se pudo crear archivo pickle en '{}'".format(JSON_ABS_PATH))
         return 1
     log("Archivo pickle actualizado con éxito")
     logWrite("Archivo pickle actualizado con éxito")
     return 0
 
-def loadPickleFile():
+def loadDispsFile():
     # ver si archivo existe
-    if not os.path.isfile(PICKLE_ABS_PATH):
+    if not os.path.isfile(JSON_ABS_PATH):
         log("Archivo pickle no existe. No se carga nada")
         logWrite("Archivo pickle no existe. No se carga nada")
         return []
     # intentar cargar archivo
-    with open(PICKLE_ABS_PATH, 'rb') as file:
-        disps = pickle.load(file)
+    with open(JSON_ABS_PATH, 'rb') as file:
+        disps = json.load(file)
     log("Archivo pickle cargado")
     logWrite("Archivo pickle cargado")
     return disps
+
+def jdefault(object):
+    return object.__dict__
 
 ############ MAIN ##
 def main():
@@ -554,7 +556,7 @@ def main():
     log("Inicializando dispositivos...")
     # Cargar dispositivos
     # Se leerá archivo de dispositivos previamente guardado
-    disps = loadPickleFile()
+    disps = loadDispsFile()
     # Inicializar dispositivos
     # disps.append(Device("luz entrada",2,"20:20","07:20", r_threshold = 10))    
     # disps.append(Device("luz delantera",3,"20:40","07:30", r_threshold = 20))
