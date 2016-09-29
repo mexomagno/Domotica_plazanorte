@@ -412,7 +412,7 @@ def atender(data):
             # Crear dispositivo y agregar
             disps.append(Device(d["set_name"][0], d["disp"][0], "{}:{}".format(d["on_time"][0], d["on_time"][1]), "{}:{}".format(d["off_time"][0], d["off_time"][1]),r_threshold=d["set_randomize"]))
             print "Agregado dispositivo '{}' en GPIO {}".format(d["set_name"][0], d["disp"][0])
-            updateDispsFile()
+            # updateDispsFile()
             return "OK"
         # Modificar un dispositivo
         # ver si existe
@@ -429,7 +429,7 @@ def atender(data):
                     print "Eliminado dispositivo '{}' en GPIO {}".format(device.getName(), device.getGpio())
                     device.setValue(0)
                     disps.remove(device)
-                    updateDispsFile()
+                    # updateDispsFile()
                     return "OK"
         # Modificar configuraciones de cada dispositivo
         if d["set_name"] is not None:
@@ -461,7 +461,7 @@ def atender(data):
         else:
             OVERRIDE_ALWAYS = d["override_status"]
             print "{} modo OVERRIDE...".format("Activando" if OVERRIDE_ALWAYS else "Desactivando")
-    updateDispsFile()
+    #updateDispsFile()
     return "OK"
 def seekDisp(key, criterion="name"):
     global disps
@@ -556,9 +556,10 @@ def main():
     log("Inicializando dispositivos...")
     # Cargar dispositivos
     # Se leerá archivo de dispositivos previamente guardado
-    disps = loadDispsFile()
+    # disps = loadDispsFile()
     # Inicializar dispositivos
-    # disps.append(Device("luz entrada",2,"20:20","07:20", r_threshold = 10))    
+    disps = []
+    disps.append(Device("luz entrada",2,"20:20","07:20", r_threshold = 10))    
     # disps.append(Device("luz delantera",3,"20:40","07:30", r_threshold = 20))
     # disps.append(Device("Riego alrededor", 17, "22:00", "22:30", r_threshold = 0))
     # Inicializar handler señal SIGINT
